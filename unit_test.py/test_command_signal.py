@@ -9,7 +9,7 @@ def test_trapezoidal_signal():
     """
     signal = CommandSignal()
     x, y = [], []
-    for time_count in range(4400):
+    for time_count in range(4600):
         x.append(time_count)
         y.append(signal.trapezoidal(time_count * 0.0001))
     plt.plot(x, y)

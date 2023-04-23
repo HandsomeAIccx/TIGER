@@ -6,15 +6,34 @@ from src.control_env.servo_signal import CommandSignal
 
 
 class ServoSystem(object):
+    """
+    This class is used to simulate the servo system.
+    """
+
     def __init__(self, configs) -> None:
         """
-        The init function is called at the beginning of each episode.
+        Initialize function for ServoSystem class.
+
+        Args:
+            configs (dict): The configuration of the servo system.
+
+        Returns:
+            None
         """
         self.configs = configs
+
+        assert "simulate_times" in self.configs, "simulate_times must be in configs"
+        assert "dt" in self.configs, "dt must be in configs"
+
+        self.simulate_times = self.configs["simulate_times"]
+        self.dt = self.configs["dt"]
+
         self.observation_space = Box(
             low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32
-        )
-        self.action_space = Box(low=-5.0, high=5.0, shape=(1,), dtype=np.float32)
+        )  # set observation space for 6 dimensions.
+        self.action_space = Box(
+            low=-5.0, high=5.0, shape=(1,), dtype=np.float32
+        )  # action bounds are [-5, 5]
 
         self.command_signal = CommandSignal()
 
@@ -28,6 +47,15 @@ class ServoSystem(object):
         self.track_x, self.track_y, self.track_error = [], [], []
 
     def reset(self):
+        """
+        Reset function for ServoSystem class.
+
+        Args:
+            None
+
+        Returns:
+            obs (np.array): The observation of the servo system.
+        """
         self.rad_pre_step = 0  # rad of servo previous step
         self.rad_current = 0  # rad of servo
         self.rad_target = 0  # target rad of servo
@@ -41,7 +69,7 @@ class ServoSystem(object):
         self.track_x.append(self.step_count)
         self.track_y.append(self.rad_current)
         self.track_error.append(self.error_current)
-        return np.array(
+        obs = np.array(
             [
                 self.rad_pre_step,
                 self.rad_current,
@@ -51,6 +79,7 @@ class ServoSystem(object):
                 self.error_current,
             ]
         )
+        return obs
 
     def step(self, action):
         assert action in self.action_space, "action is not in action space"
@@ -78,7 +107,7 @@ class ServoSystem(object):
         self.track_x.append(self.step_count)
         self.track_y.append(self.rad_current)
         self.track_error.append(self.error_current)
-        return np.array(
+        obs = np.array(
             [
                 self.rad_pre_step,
                 self.rad_current,
@@ -88,25 +117,31 @@ class ServoSystem(object):
                 self.error_current,
             ]
         )
+        return obs
 
     def render(self):
-        plt.cla()
-        fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
-        axs[0].plot(self.signal_x, self.signal_y, "-r", label="CommandSignal")
-        axs[0].plot(self.track_x, self.track_y, "ob", label="Trajectory")
-        axs[0].set_title(
+        ax1 = plt.subplot(121)
+        ax1.figure.set_size_inches(12, 6)
+        ax1.cla()
+        ax1.plot(self.signal_x, self.signal_y, "-r", label="CommandSignal")
+        ax1.plot(self.track_x, self.track_y, "ob", label="Trajectory")
+        ax1.set_title(
             "speed:"
             + str(round(float(self.rad_current), 2))
             + ",target index:"
             + str(round(float(self.rad_target), 2))
         )
-        axs[0].legend()
+        ax1.grid(True)
+        ax1.legend(loc="upper right")
 
-        axs[1].plot(self.track_x, self.track_error, "-b", label="CommandError")
-        axs[1].set_title("error:" + str(round(float(self.error_current), 2)))
-        axs[1].legend(loc="best")
-        axs[1].grid(True)
-        plt.pause(0.0001)
+        ax2 = plt.subplot(122)
+        ax2.figure.set_size_inches(12, 6)
+        ax2.cla()
+        ax2.plot(self.track_x, self.track_error, "-b", label="CommandError")
+        ax2.set_title("error:" + str(round(float(self.error_current), 2)))
+        ax2.grid(True)
+        ax2.legend(loc="upper right")
+        plt.pause(0.00001)
 
     def system(self, electric):
         if isinstance(electric, np.ndarray):
